@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Use Claude — Interactive Pre-Read</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:       #CF5F28;
+      --accent-light: #FEF0E7;
+      --accent-mid:   #F5C9A8;
+      --bg:           #FBF7F4;
+      --surface:      #FFFFFF;
+      --text:         #1C1917;
+      --text-2:       #78716C;
+      --border:       #E8E2DC;
+      --font-serif:   Georgia, 'Times New Roman', serif;
+      --font-sans:    system-ui, -apple-system, sans-serif;
+      --radius:       12px;
+      --ease:         cubic-bezier(.4,0,.2,1);
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── NAV ── */
+    nav {
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .nav-logo {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-logo svg { width: 16px; height: 16px; fill: white; }
+    .nav-title { font-size: 15px; font-weight: 600; color: var(--text); }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 720px;
+      margin: 80px auto 60px;
+      padding: 0 32px;
+      text-align: center;
+    }
+    .hero-tag {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-light);
+      border: 1px solid var(--accent-mid);
+      padding: 4px 12px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: normal;
+      line-height: 1.2;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+    .hero p {
+      font-size: 18px;
+      line-height: 1.7;
+      color: var(--text-2);
+      max-width: 540px;
+      margin: 0 auto 12px;
+    }
+    .hero-meta {
+      font-size: 13px;
+      color: var(--text-2);
+      margin-top: 8px;
+    }
+    .hero-meta span {
+      display: inline-flex; align-items: center; gap: 4px;
+      margin: 0 8px;
+    }
+
+    /* ── SERIES GRID ── */
+    .series {
+      max-width: 720px;
+      margin: 0 auto 80px;
+      padding: 0 32px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 600px) { .series { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      text-decoration: none;
+      color: var(--text);
+      display: block;
+      transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--accent);
+      transform: scaleX(0); transform-origin: left;
+      transition: transform .25s var(--ease);
+    }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.08); border-color: var(--accent-mid); }
+    .card:hover::before { transform: scaleX(1); }
+
+    .card-num {
+      font-size: 11px; font-weight: 700; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 14px;
+    }
+    .card h2 { font-family: var(--font-serif); font-size: 22px; font-weight: normal; margin-bottom: 10px; }
+    .card p { font-size: 14px; line-height: 1.65; color: var(--text-2); margin-bottom: 20px; }
+    .card-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pill {
+      font-size: 11px; padding: 3px 9px;
+      background: var(--accent-light); color: var(--accent);
+      border-radius: 100px; font-weight: 500;
+    }
+    .card-arrow {
+      position: absolute; bottom: 24px; right: 24px;
+      color: var(--accent); font-size: 18px;
+      transition: transform .2s var(--ease);
+    }
+    .card:hover .card-arrow { transform: translateX(4px); }
+
+    /* ── DIVIDER ── */
+    .divider {
+      max-width: 720px; margin: 0 auto 48px; padding: 0 32px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .divider hr { flex: 1; border: none; border-top: 1px solid var(--border); }
+    .divider span { font-size: 13px; color: var(--text-2); white-space: nowrap; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 40px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-2);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+  </div>
+  <span class="nav-title">How to Use Claude</span>
+</nav>
+
+<section class="hero">
+  <div class="hero-tag">Interactive Pre-Read</div>
+  <h1>Get more from Claude,<br>before you start.</h1>
+  <p>Two short, interactive lessons that give you the mental models to use Claude effectively — from day one.</p>
+  <div class="hero-meta">
+    <span>⏱ ~15 min total</span>
+    <span>🎛 5 interactive demos</span>
+    <span>📖 No prior AI knowledge needed</span>
+  </div>
+</section>
+
+<div class="series">
+
+  <a class="card" href="part1.html">
+    <div class="card-num">Part 01</div>
+    <h2>What is Claude?</h2>
+    <p>Build the right mental model. Understand what Claude actually is, how it processes your words, and what it can help with.</p>
+    <div class="card-pills">
+      <span class="pill">Mental models</span>
+      <span class="pill">Capabilities</span>
+      <span class="pill">Context window</span>
+    </div>
+    <span class="card-arrow">→</span>
+  </a>
+
+  <a class="card" href="part2.html">
+    <div class="card-num">Part 02</div>
+    <h2>Prompting Essentials</h2>
+    <p>Learn the anatomy of a great prompt. Build one interactively and see — in real time — why specificity changes everything.</p>
+    <div class="card-pills">
+      <span class="pill">Prompt anatomy</span>
+      <span class="pill">Specificity</span>
+      <span class="pill">Format control</span>
+    </div>
+    <span class="card-arrow">→</span>
+  </a>
+
+</div>
+
+<div class="divider">
+  <hr>
+  <span>Inspired by <a href="https://explorabl.es" target="_blank" style="color:var(--accent);text-decoration:none;">Explorable Explanations</a></span>
+  <hr>
+</div>
+
+<footer>
+  Built for learning · <a href="https://claude.ai" target="_blank">claude.ai</a>
+</footer>
+
+</body>
+</html>

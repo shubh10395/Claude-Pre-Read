@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prompting Essentials — Interactive Pre-Read</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:       #CF5F28;
+      --accent-light: #FEF0E7;
+      --accent-mid:   #F5C9A8;
+      --bg:           #FBF7F4;
+      --surface:      #FFFFFF;
+      --text:         #1C1917;
+      --text-2:       #78716C;
+      --border:       #E8E2DC;
+      --green:        #16A34A;
+      --green-light:  #F0FDF4;
+      --font-serif:   Georgia, 'Times New Roman', serif;
+      --font-sans:    system-ui, -apple-system, sans-serif;
+      --font-mono:    'Menlo', 'Consolas', monospace;
+      --radius:       12px;
+      --ease:         cubic-bezier(.4,0,.2,1);
+      --dur:          220ms;
+    }
+
+    body { font-family: var(--font-sans); background: var(--bg); color: var(--text); }
+
+    /* ── NAV ── */
+    nav {
+      padding: 18px 40px; display: flex; align-items: center;
+      gap: 8px; border-bottom: 1px solid var(--border); background: var(--surface);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .breadcrumb { font-size: 13px; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+    .breadcrumb a { color: var(--accent); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .breadcrumb span { opacity: .5; }
+    .nav-back { margin-left: auto; }
+    .nav-back a { font-size: 13px; color: var(--accent); text-decoration: none; }
+    .nav-back a:hover { text-decoration: underline; }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative; overflow: hidden;
+      background: linear-gradient(135deg, #0D1F12 0%, #1A3D1F 50%, #0A1A0D 100%);
+      color: white; padding: 80px 40px 72px; text-align: center;
+    }
+    #hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .4; }
+    .hero-inner { position: relative; z-index: 1; max-width: 600px; margin: 0 auto; }
+    .hero-tag {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: #86EFAC; background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15); padding: 5px 14px;
+      border-radius: 100px; margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-family: var(--font-serif); font-size: clamp(2rem,5vw,3rem);
+      font-weight: normal; line-height: 1.2; margin-bottom: 18px;
+    }
+    .hero p { font-size: 17px; line-height: 1.7; opacity: .75; max-width: 480px; margin: 0 auto; }
+    .hero-meta { margin-top: 28px; display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; }
+    .hero-meta span { font-size: 13px; opacity: .6; display: flex; align-items: center; gap: 5px; }
+
+    /* ── PROSE ── */
+    .prose { max-width: 680px; margin: 0 auto; padding: 64px 32px 0; }
+    .prose h2 {
+      font-family: var(--font-serif); font-size: 1.75rem; font-weight: normal;
+      margin-bottom: 16px; margin-top: 64px; line-height: 1.3;
+    }
+    .prose h2:first-child { margin-top: 0; }
+    .prose p { font-size: 17px; line-height: 1.8; margin-bottom: 20px; }
+    .prose strong { font-weight: 600; }
+    .callout {
+      background: var(--accent-light); border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 18px 22px; margin: 28px 0; font-size: 15px; line-height: 1.7;
+    }
+
+    /* ── WIDGET SHARED ── */
+    .widget {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); margin: 36px 0; overflow: hidden;
+    }
+    .widget-header {
+      padding: 16px 22px 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .widget-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: var(--accent-light); display: flex; align-items: center;
+      justify-content: center; font-size: 14px; flex-shrink: 0;
+    }
+    .widget-label { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
+    .widget-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .widget-body { padding: 24px 22px; }
+
+    /* ── WIDGET 1: PROMPT BUILDER ── */
+    .pb-parts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .pb-part {
+      border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden;
+      transition: border-color var(--dur);
+    }
+    .pb-part.on { border-color: var(--accent); }
+    .pb-part-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; cursor: pointer; background: var(--bg);
+      transition: background var(--dur); user-select: none;
+    }
+    .pb-part.on .pb-part-header { background: var(--accent-light); }
+    .pb-toggle {
+      width: 36px; height: 20px; border-radius: 100px;
+      background: var(--border); position: relative;
+      transition: background var(--dur); flex-shrink: 0;
+    }
+    .pb-toggle::after {
+      content: ''; position: absolute; top: 2px; left: 2px;
+      width: 16px; height: 16px; border-radius: 50%; background: white;
+      transition: transform var(--dur) var(--ease);
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    .pb-part.on .pb-toggle { background: var(--accent); }
+    .pb-part.on .pb-toggle::after { transform: translateX(16px); }
+    .pb-part-info { flex: 1; }
+    .pb-part-name { font-size: 13px; font-weight: 700; color: var(--text); }
+    .pb-part-desc { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+    .pb-part-badge {
+      font-size: 11px; padding: 3px 8px; border-radius: 100px;
+      background: var(--accent-light); color: var(--accent); font-weight: 600;
+    }
+    .pb-part.on .pb-part-badge { background: var(--accent); color: white; }
+
+    .pb-preview {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px 18px;
+      font-family: var(--font-mono); font-size: 13px; line-height: 1.75;
+      color: var(--text-2); min-height: 90px; transition: all .3s;
+      white-space: pre-wrap;
+    }
+    .pb-preview .part-role    { color: #7C3AED; font-weight: 600; }
+    .pb-preview .part-context { color: #0369A1; }
+    .pb-preview .part-task    { color: var(--text); font-weight: 600; }
+    .pb-preview .part-format  { color: var(--green); }
+    .pb-score {
+      margin-top: 12px; display: flex; align-items: center; gap: 10px;
+    }
+    .pb-score-bar {
+      flex: 1; height: 6px; background: var(--border); border-radius: 100px; overflow: hidden;
+    }
+    .pb-score-fill {
+      height: 100%; border-radius: 100px;
+      background: linear-gradient(90deg, #EF4444, #F59E0B, #22C55E);
+      transition: width .4s var(--ease);
+    }
+    .pb-score-label { font-size: 12px; color: var(--text-2); width: 110px; text-align: right; }
+
+    /* ── WIDGET 2: VAGUE VS SPECIFIC ── */
+    .vs-slider-wrap { margin-bottom: 20px; }
+    .vs-labels { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .vs-labels span { font-size: 12px; font-weight: 700; }
+    .vs-labels .vague { color: #EF4444; }
+    .vs-labels .specific { color: var(--green); }
+    input[type=range].vs-slider {
+      width: 100%; height: 6px; border-radius: 100px;
+      -webkit-appearance: none; appearance: none;
+      background: linear-gradient(90deg, #FCA5A5, #86EFAC);
+      outline: none; cursor: pointer; margin-bottom: 6px;
+    }
+    input[type=range].vs-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 20px; height: 20px;
+      border-radius: 50%; background: var(--surface);
+      border: 2px solid var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.15);
+      cursor: grab;
+    }
+    .vs-prompt {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 16px 18px; font-size: 14px; line-height: 1.7;
+      font-family: var(--font-mono); min-height: 90px; transition: background .3s, border-color .3s;
+    }
+    .vs-prompt.good { background: var(--green-light); border-color: #86EFAC; }
+    .vs-score { font-size: 12px; color: var(--text-2); margin-top: 8px; }
+    .vs-score strong { color: var(--accent); }
+    .vs-result {
+      margin-top: 16px; padding: 16px 18px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--bg);
+      font-size: 13px; line-height: 1.7; color: var(--text-2);
+      transition: all .3s;
+    }
+    .vs-result .vs-result-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); margin-bottom: 8px; }
+
+    /* ── WIDGET 3: FORMAT PICKER ── */
+    .fp-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .fp-group { flex: 1; min-width: 180px; }
+    .fp-group-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); margin-bottom: 8px; }
+    .fp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .fp-chip {
+      padding: 6px 14px; border-radius: 100px; font-size: 13px;
+      border: 1.5px solid var(--border); background: var(--bg);
+      cursor: pointer; transition: all var(--dur) var(--ease);
+      font-family: var(--font-sans);
+    }
+    .fp-chip:hover { border-color: var(--accent-mid); background: var(--accent-light); }
+    .fp-chip.active { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+    .fp-output {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 18px 20px; font-size: 14px; line-height: 1.75; color: var(--text);
+      min-height: 110px; transition: opacity .2s;
+    }
+    .fp-output strong { font-weight: 700; }
+    .fp-instruction {
+      margin-top: 14px; padding: 12px 16px; border-radius: 8px;
+      background: var(--accent-light); font-size: 12px; color: var(--text-2);
+      font-family: var(--font-mono); line-height: 1.6;
+    }
+    .fp-instruction .label { color: var(--accent); font-weight: 700; }
+
+    /* ── BOTTOM NAV ── */
+    .bottom-nav {
+      max-width: 680px; margin: 64px auto 0; padding: 32px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-top: 1px solid var(--border);
+    }
+    .bottom-nav a { font-size: 14px; color: var(--accent); text-decoration: none; }
+    .bottom-nav a:hover { text-decoration: underline; }
+    .progress-dots { display: flex; gap: 6px; }
+    .progress-dots span {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border); transition: background .2s;
+    }
+    .progress-dots span.active { background: var(--accent); }
+
+    .finish-card {
+      max-width: 680px; margin: 48px auto; padding: 0 32px;
+    }
+    .finish-inner {
+      background: linear-gradient(135deg, #1A3D1F, #0D2B10);
+      border-radius: var(--radius); padding: 40px;
+      text-align: center; color: white;
+    }
+    .finish-inner h3 { font-family: var(--font-serif); font-size: 1.6rem; font-weight: normal; margin-bottom: 12px; }
+    .finish-inner p { font-size: 15px; opacity: .75; line-height: 1.7; margin-bottom: 24px; max-width: 400px; margin-left: auto; margin-right: auto; }
+    .finish-btn {
+      display: inline-block; padding: 12px 28px; border-radius: 8px;
+      background: white; color: #1A3D1F; font-weight: 700; font-size: 14px;
+      text-decoration: none; transition: transform .2s var(--ease), box-shadow .2s;
+    }
+    .finish-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+
+    footer { padding: 24px; text-align: center; font-size: 12px; color: var(--text-2); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="breadcrumb">
+    <a href="index.html">How to Use Claude</a>
+    <span>/</span>
+    <strong style="color:var(--text)">Part 02 — Prompting Essentials</strong>
+  </div>
+  <div class="nav-back"><a href="part1.html">← Part 01</a></div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-inner">
+    <div class="hero-tag">Part 02 of 02</div>
+    <h1>Prompting Essentials</h1>
+    <p>The difference between a mediocre and brilliant Claude response is almost always the quality of the prompt.</p>
+    <div class="hero-meta">
+      <span>⏱ ~7 min</span>
+      <span>🎛 3 interactive demos</span>
+    </div>
+  </div>
+</div>
+
+<!-- PROSE -->
+<div class="prose">
+
+  <h2>The anatomy of a great prompt</h2>
+  <p>
+    A prompt is more than a question. The best prompts give Claude four things:
+    a <strong>role</strong> to inhabit, <strong>context</strong> about the situation,
+    a clear <strong>task</strong>, and a <strong>format</strong> for the response.
+    You don't always need all four — but knowing about them makes you a better prompter.
+  </p>
+
+  <!-- WIDGET 1: PROMPT BUILDER -->
+  <div class="widget">
+    <div class="widget-header">
+      <div class="widget-icon">🏗️</div>
+      <div>
+        <div class="widget-label">Interactive Demo 1</div>
+        <div class="widget-title">Toggle each element and watch your prompt take shape</div>
+      </div>
+    </div>
+    <div class="widget-body">
+      <div class="pb-parts" id="pb-parts"></div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-2);margin-bottom:8px;">Live prompt preview</div>
+      <div class="pb-preview" id="pb-preview">Toggle the elements above to start building your prompt.</div>
+      <div class="pb-score">
+        <div class="pb-score-bar"><div class="pb-score-fill" id="pb-score-fill" style="width:0%"></div></div>
+        <div class="pb-score-label" id="pb-score-label">Prompt quality: 0%</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Vague vs. specific — the biggest lever</h2>
+  <p>
+    Specificity is the single highest-leverage change you can make to a prompt.
+    A vague prompt forces Claude to guess your intent. A specific prompt tells it
+    exactly who the audience is, what success looks like, and what constraints matter.
+  </p>
+  <p>
+    Drag the slider below to see how a prompt about the same topic transforms from
+    frustratingly vague to precisely directed.
+  </p>
+
+  <!-- WIDGET 2: VAGUE VS SPECIFIC -->
+  <div class="widget">
+    <div class="widget-header">
+      <div class="widget-icon">🎚️</div>
+      <div>
+        <div class="widget-label">Interactive Demo 2</div>
+        <div class="widget-title">Drag the slider from vague to specific</div>
+      </div>
+    </div>
+    <div class="widget-body">
+      <div class="vs-slider-wrap">
+        <div class="vs-labels">
+          <span class="vague">← Vague</span>
+          <span class="specific">Specific →</span>
+        </div>
+        <input type="range" class="vs-slider" id="vs-slider" min="0" max="4" step="1" value="0">
+      </div>
+      <div class="vs-prompt" id="vs-prompt"></div>
+      <div class="vs-score" id="vs-score"></div>
+      <div class="vs-result" id="vs-result">
+        <div class="vs-result-label">What Claude would likely produce</div>
+        <div id="vs-result-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Common mistake:</strong> People write short prompts because they feel like they're
+    being demanding by writing more. The opposite is true — more context = less guesswork =
+    better output. Claude doesn't charge by the word.
+  </div>
+
+  <h2>Control the format of responses</h2>
+  <p>
+    Claude will match your format if you tell it what you want.
+    Need bullet points? Ask. Want a numbered list? Say so. Prefer a short paragraph over
+    a long essay? Specify. You're in control — you just have to ask explicitly.
+  </p>
+
+  <!-- WIDGET 3: FORMAT PICKER -->
+  <div class="widget">
+    <div class="widget-header">
+      <div class="widget-icon">🎨</div>
+      <div>
+        <div class="widget-label">Interactive Demo 3</div>
+        <div class="widget-title">Pick a format and tone — see how the response changes</div>
+      </div>
+    </div>
+    <div class="widget-body">
+      <div class="fp-row">
+        <div class="fp-group">
+          <div class="fp-group-label">Format</div>
+          <div class="fp-chips" id="fp-format"></div>
+        </div>
+        <div class="fp-group">
+          <div class="fp-group-label">Tone</div>
+          <div class="fp-chips" id="fp-tone"></div>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-2);margin-bottom:8px;">Claude's response on "How to handle a difficult coworker"</div>
+      <div class="fp-output" id="fp-output">Select a format and tone above to see a sample response.</div>
+      <div class="fp-instruction" id="fp-instruction" style="display:none">
+        <span class="label">Add this to your prompt »</span><br>
+        <span id="fp-instr-text"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FINISH CARD -->
+<div class="finish-card">
+  <div class="finish-inner">
+    <h3>You're ready to use Claude.</h3>
+    <p>You've built the mental models. Now put them to work — open Claude and try a prompt using what you learned here.</p>
+    <a class="finish-btn" href="https://claude.ai" target="_blank">Open Claude →</a>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <a href="part1.html">← Part 01: What is Claude?</a>
+  <div class="progress-dots">
+    <span></span>
+    <span class="active"></span>
+  </div>
+  <a href="index.html">Back to overview</a>
+</div>
+
+<footer>How to Use Claude — Interactive Pre-Read</footer>
+
+<script>
+// ── HERO CANVAS (green variant) ────────────────────────────
+(function() {
+  const canvas = document.getElementById('hero-canvas');
+  const ctx = canvas.getContext('2d');
+  let nodes = [], W, H;
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    W = canvas.offsetWidth; H = canvas.offsetHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+  }
+  function initNodes() {
+    nodes = [];
+    for (let i = 0; i < 35; i++) {
+      nodes.push({ x: Math.random()*W, y: Math.random()*H,
+        vx:(Math.random()-.5)*.35, vy:(Math.random()-.5)*.35,
+        r: 2+Math.random()*2, phase: Math.random()*Math.PI*2 });
+    }
+  }
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    const CONN = 120;
+    nodes.forEach(n=>{
+      n.x+=n.vx; n.y+=n.vy; n.phase+=.011;
+      if(n.x<0)n.x+=W; if(n.x>W)n.x-=W;
+      if(n.y<0)n.y+=H; if(n.y>H)n.y-=H;
+    });
+    for(let i=0;i<nodes.length;i++){
+      for(let j=i+1;j<nodes.length;j++){
+        const dx=nodes[i].x-nodes[j].x,dy=nodes[i].y-nodes[j].y;
+        const d=Math.sqrt(dx*dx+dy*dy);
+        if(d<CONN){
+          ctx.strokeStyle=`rgba(134,239,172,${(1-d/CONN)*.3})`;
+          ctx.lineWidth=.8;
+          ctx.beginPath();ctx.moveTo(nodes[i].x,nodes[i].y);
+          ctx.lineTo(nodes[j].x,nodes[j].y);ctx.stroke();
+        }
+      }
+    }
+    nodes.forEach(n=>{
+      const g=.5+.3*Math.sin(n.phase);
+      ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(134,239,172,${g})`;ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  resize();initNodes();draw();
+  window.addEventListener('resize',()=>{resize();initNodes();});
+})();
+
+// ── WIDGET 1: PROMPT BUILDER ───────────────────────────────
+const PB_PARTS = [
+  {
+    key:'role', name:'Role', badge:'Who should Claude be?',
+    desc:'Tell Claude to adopt a persona or expertise. This shapes its vocabulary and depth.',
+    text:'You are an experienced product manager who has launched multiple B2B SaaS products.',
+    cls:'part-role'
+  },
+  {
+    key:'context', name:'Context', badge:'What\'s the situation?',
+    desc:'Background info Claude needs. The richer this is, the less it has to assume.',
+    text:'I\'m preparing for a quarterly review with my CEO. The product is 3 months post-launch with mixed retention metrics.',
+    cls:'part-context'
+  },
+  {
+    key:'task', name:'Task', badge:'What do you want?',
+    desc:'The actual request. Be specific about what "done" looks like.',
+    text:'Write 5 talking points I can use to explain our churn rate and outline a 30-day retention improvement plan.',
+    cls:'part-task'
+  },
+  {
+    key:'format', name:'Format', badge:'How should it respond?',
+    desc:'Tell Claude how to structure its output: length, format, headings, tone.',
+    text:'Keep each talking point under 2 sentences. List the retention actions as numbered steps.',
+    cls:'part-format'
+  }
+];
+
+const state = { role:false, context:false, task:false, format:false };
+const partsEl = document.getElementById('pb-parts');
+const previewEl = document.getElementById('pb-preview');
+const scoreFillEl = document.getElementById('pb-score-fill');
+const scoreLabelEl = document.getElementById('pb-score-label');
+
+PB_PARTS.forEach(p => {
+  const wrap = document.createElement('div');
+  wrap.className = 'pb-part';
+  wrap.dataset.key = p.key;
+  wrap.innerHTML = `
+    <div class="pb-part-header">
+      <div class="pb-toggle"></div>
+      <div class="pb-part-info">
+        <div class="pb-part-name">${p.name}</div>
+        <div class="pb-part-desc">${p.desc}</div>
+      </div>
+      <div class="pb-part-badge">${p.badge}</div>
+    </div>`;
+  wrap.querySelector('.pb-part-header').addEventListener('click', () => {
+    state[p.key] = !state[p.key];
+    wrap.classList.toggle('on', state[p.key]);
+    updatePBPreview();
+  });
+  partsEl.appendChild(wrap);
+});
+
+function updatePBPreview() {
+  const on = PB_PARTS.filter(p => state[p.key]);
+  if (on.length === 0) {
+    previewEl.textContent = 'Toggle the elements above to start building your prompt.';
+    scoreFillEl.style.width = '0%';
+    scoreLabelEl.textContent = 'Prompt quality: 0%';
+    return;
+  }
+  const pct = (on.length / 4) * 100;
+  scoreFillEl.style.width = pct + '%';
+  const labels = ['', 'Weak (25%)', 'Fair (50%)', 'Strong (75%)', 'Excellent (100%)'];
+  scoreLabelEl.textContent = 'Prompt quality: ' + labels[on.length];
+
+  previewEl.innerHTML = on.map(p =>
+    `<span class="${p.cls}">${p.text}</span>`
+  ).join(' ');
+}
+
+// ── WIDGET 2: VAGUE VS SPECIFIC ────────────────────────────
+const VS_LEVELS = [
+  {
+    prompt: 'Write something about dealing with a difficult coworker.',
+    quality: 'Very vague — no audience, no context, no output shape',
+    result: 'A generic 3-paragraph essay covering conflict resolution broadly. Probably usable but not tailored to you at all.'
+  },
+  {
+    prompt: 'Give me advice on dealing with a difficult coworker who interrupts me in meetings.',
+    quality: 'A little better — specific problem identified',
+    result: 'Advice focused on meeting interruptions. Still generic in tone; doesn\'t know your role or what you\'ve already tried.'
+  },
+  {
+    prompt: 'I\'m a junior designer and a senior engineer constantly talks over me in standups. Give me 3 concrete tactics to handle this professionally.',
+    quality: 'Much better — role, situation, and output format given',
+    result: '3 specific tactics for a junior designer in standups. Tone is practical. Claude can now tailor to your power dynamic.'
+  },
+  {
+    prompt: 'I\'m a junior designer. A senior engineer interrupts me in every standup. I\'ve already tried speaking up in the moment — it hasn\'t worked. Give me 3 tactics, each under 50 words, that I can use this week without escalating to management.',
+    quality: 'Excellent — constraints, what\'s been tried, format, timeline',
+    result: '3 focused, actionable tactics within your constraints. Claude knows what NOT to suggest (escalation, things you\'ve tried). This is the output you actually want.'
+  },
+  {
+    prompt: 'I\'m a junior designer. A senior engineer consistently talks over me in daily standups. I\'ve tried speaking up and it backfired. I need 3 low-risk, professional tactics I can use THIS week — not escalation, not confrontation. Each tactic should be ≤50 words and written as a script I can say out loud.',
+    quality: 'Perfect — precise, constrained, with exact output format',
+    result: '3 word-for-word scripts you can say in your standup tomorrow, tailored to your situation. Zero ambiguity. This is exactly how Claude shines.'
+  }
+];
+
+const vsSlider = document.getElementById('vs-slider');
+const vsPromptEl = document.getElementById('vs-prompt');
+const vsScoreEl = document.getElementById('vs-score');
+const vsResultText = document.getElementById('vs-result-text');
+
+function updateVS() {
+  const v = parseInt(vsSlider.value);
+  const lvl = VS_LEVELS[v];
+  vsPromptEl.textContent = lvl.prompt;
+  vsPromptEl.className = 'vs-prompt' + (v >= 3 ? ' good' : '');
+  vsScoreEl.innerHTML = `<strong>Assessment:</strong> ${lvl.quality}`;
+  vsResultText.textContent = lvl.result;
+}
+vsSlider.addEventListener('input', updateVS);
+updateVS();
+
+// ── WIDGET 3: FORMAT PICKER ────────────────────────────────
+const FP_FORMATS = ['Bullet list', 'Numbered steps', 'Short paragraph', 'Table', 'One sentence'];
+const FP_TONES   = ['Direct', 'Empathetic', 'Formal', 'Casual'];
+
+const FP_RESPONSES = {
+  'Bullet list|Direct': {
+    text: `<strong>Key tactics:</strong><br>• Address the issue privately, not publicly<br>• Name the specific behavior, not the person's character<br>• Propose a concrete change you need<br>• Set a clear expectation and follow-up date`,
+    instr: `Respond in a bullet list. Be direct and skip preamble.`
+  },
+  'Bullet list|Empathetic': {
+    text: `<strong>It's harder than it sounds, but here's a start:</strong><br>• Acknowledge their perspective before raising yours<br>• Choose a low-pressure moment (not during conflict)<br>• Express how the behavior affects you, not what they're "doing wrong"<br>• Give them room to respond without defensiveness`,
+    instr: `Respond in a bullet list. Use a warm, empathetic tone.`
+  },
+  'Bullet list|Formal': {
+    text: `<strong>Recommended approach:</strong><br>• Initiate a private discussion at a mutually convenient time<br>• Articulate specific behavioral observations objectively<br>• Present the professional impact of the conduct<br>• Establish measurable expectations and a review timeline`,
+    instr: `Respond in a bullet list. Use formal, professional language.`
+  },
+  'Bullet list|Casual': {
+    text: `<strong>Honestly?</strong><br>• Pull them aside — don't do this in a group<br>• Just say what's actually bothering you<br>• Keep it short, don't lecture<br>• See if they have any idea they're doing it`,
+    instr: `Respond in a bullet list. Keep it casual and conversational.`
+  },
+  'Numbered steps|Direct': {
+    text: `<strong>Step-by-step:</strong><br>1. Request a private meeting within 48 hours<br>2. Describe the specific behavior and its impact<br>3. State what you need to change<br>4. Agree on a check-in date<br>5. Document the conversation briefly`,
+    instr: `Respond as numbered steps. Be concise and direct.`
+  },
+  'Numbered steps|Empathetic': {
+    text: `<strong>Take it one step at a time:</strong><br>1. Take a breath — this is genuinely hard<br>2. Find a quiet moment when neither of you is stressed<br>3. Start by acknowledging any positive intent on their part<br>4. Share your experience using "I" statements<br>5. Ask them how they'd like to handle it going forward`,
+    instr: `Respond as numbered steps. Use a warm, empathetic tone.`
+  },
+  'Numbered steps|Formal': {
+    text: `<strong>Recommended procedure:</strong><br>1. Schedule a formal private meeting<br>2. Prepare documented examples of the behavior in question<br>3. Present observations in behavioral, non-judgmental terms<br>4. Outline the required behavioral changes clearly<br>5. Establish a timeline for review and escalation criteria`,
+    instr: `Respond as numbered steps. Use formal, professional language.`
+  },
+  'Numbered steps|Casual': {
+    text: `<strong>Here's what I'd do:</strong><br>1. Don't let it fester — handle it soon<br>2. Grab coffee, not a conference room<br>3. Just be straight with them<br>4. Ask if something's going on on their end<br>5. If nothing changes in a week, then escalate`,
+    instr: `Respond as numbered steps. Keep it casual and conversational.`
+  },
+  'Short paragraph|Direct': {
+    text: `Address it privately and soon. Describe the specific behavior (not their personality), explain the professional impact, and state clearly what you need to change. Keep it short. Most workplace friction resolves faster when named directly.`,
+    instr: `Respond in a single short paragraph. Be direct.`
+  },
+  'Short paragraph|Empathetic': {
+    text: `Difficult coworker relationships are genuinely draining, and it takes courage to address them. Try finding a low-stakes moment to share how you're experiencing the dynamic — focus on your feelings, not their flaws. Most people aren't aware of the impact they have, and a calm, honest conversation often goes further than you'd expect.`,
+    instr: `Respond in a single short paragraph. Use a warm, empathetic tone.`
+  },
+  'Short paragraph|Formal': {
+    text: `It is advisable to initiate a private dialogue at the earliest appropriate opportunity. Frame your observations in behavioral terms, referencing specific instances where possible, and articulate the professional impact on your work. Conclude with a clear articulation of the behavioral adjustment you are requesting and agree upon a review date.`,
+    instr: `Respond in a single short paragraph. Use formal, professional language.`
+  },
+  'Short paragraph|Casual': {
+    text: `Honestly, just talk to them — sooner is better. Don't make it a big deal, just say something like "hey, I wanted to mention something." Most people have no idea they're being difficult, and a quick chat clears the air way faster than avoiding it.`,
+    instr: `Respond in one short paragraph. Keep it casual and conversational.`
+  },
+  'Table|Direct': {
+    text: `<strong>Situation → Action mapping:</strong><br><table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px"><tr style="background:var(--bg)"><th style="text-align:left;padding:6px 10px;border:1px solid var(--border)">Situation</th><th style="text-align:left;padding:6px 10px;border:1px solid var(--border)">Action</th></tr><tr><td style="padding:6px 10px;border:1px solid var(--border)">Ongoing pattern</td><td style="padding:6px 10px;border:1px solid var(--border)">Private conversation, soon</td></tr><tr style="background:var(--bg)"><td style="padding:6px 10px;border:1px solid var(--border)">In-the-moment conflict</td><td style="padding:6px 10px;border:1px solid var(--border)">Brief pause, revisit later</td></tr><tr><td style="padding:6px 10px;border:1px solid var(--border)">No improvement after talk</td><td style="padding:6px 10px;border:1px solid var(--border)">Involve manager</td></tr></table>`,
+    instr: `Format your response as a table. Be direct.`
+  },
+  'Table|Empathetic': {
+    text: `<strong>How to read the situation:</strong><br><table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px"><tr style="background:var(--bg)"><th style="text-align:left;padding:6px 10px;border:1px solid var(--border)">What you're feeling</th><th style="text-align:left;padding:6px 10px;border:1px solid var(--border)">Gentle approach</th></tr><tr><td style="padding:6px 10px;border:1px solid var(--border)">Drained or frustrated</td><td style="padding:6px 10px;border:1px solid var(--border)">Give yourself space before engaging</td></tr><tr style="background:var(--bg)"><td style="padding:6px 10px;border:1px solid var(--border)">Uncertain if it's worth raising</td><td style="padding:6px 10px;border:1px solid var(--border)">It usually is — most wish they had sooner</td></tr><tr><td style="padding:6px 10px;border:1px solid var(--border)">Worried about their reaction</td><td style="padding:6px 10px;border:1px solid var(--border)">Focus on your experience, not their intent</td></tr></table>`,
+    instr: `Format your response as a table. Use a warm, empathetic tone.`
+  },
+  'Table|Formal': {
+    text: `<strong>Recommended escalation matrix:</strong><br><table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px"><tr style="background:var(--bg)"><th style="text-align:left;padding:6px 10px;border:1px solid var(--border)">Severity</th><th style="text-align:left;padding:6px 10px;border:1px solid var(--border)">Recommended Action</th></tr><tr><td style="padding:6px 10px;border:1px solid var(--border)">Minor friction</td><td style="padding:6px 10px;border:1px solid var(--border)">Peer-to-peer dialogue</td></tr><tr style="background:var(--bg)"><td style="padding:6px 10px;border:1px solid var(--border)">Persistent behavior</td><td style="padding:6px 10px;border:1px solid var(--border)">Formal 1:1 with documented follow-up</td></tr><tr><td style="padding:6px 10px;border:1px solid var(--border)">No resolution after 2 weeks</td><td style="padding:6px 10px;border:1px solid var(--border)">Management/HR involvement</td></tr></table>`,
+    instr: `Format your response as a table. Use formal, professional language.`
+  },
+  'Table|Casual': {
+    text: `<strong>Quick decision guide:</strong><br><table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px"><tr style="background:var(--bg)"><th style="text-align:left;padding:6px 10px;border:1px solid var(--border)">Vibe</th><th style="text-align:left;padding:6px 10px;border:1px solid var(--border)">What to do</th></tr><tr><td style="padding:6px 10px;border:1px solid var(--border)">They're clueless, not malicious</td><td style="padding:6px 10px;border:1px solid var(--border)">Just tell them, nicely</td></tr><tr style="background:var(--bg)"><td style="padding:6px 10px;border:1px solid var(--border)">It's getting to you</td><td style="padding:6px 10px;border:1px solid var(--border)">Talk sooner, not later</td></tr><tr><td style="padding:6px 10px;border:1px solid var(--border)">Nothing works</td><td style="padding:6px 10px;border:1px solid var(--border)">Bring in a manager, no shame in it</td></tr></table>`,
+    instr: `Format your response as a table. Keep it casual and conversational.`
+  },
+  'One sentence|Direct': {
+    text: `Address it privately, name the specific behavior (not the person), and state the change you need.`,
+    instr: `Respond in one sentence only. Be direct.`
+  },
+  'One sentence|Empathetic': {
+    text: `Find a calm, private moment and share how the dynamic is affecting you — most people genuinely don't realize the impact they're having.`,
+    instr: `Respond in one sentence only. Be warm and empathetic.`
+  },
+  'One sentence|Formal': {
+    text: `Schedule a private meeting, present your behavioral observations objectively, and articulate the professional adjustment you require.`,
+    instr: `Respond in one sentence only. Use formal language.`
+  },
+  'One sentence|Casual': {
+    text: `Just pull them aside and say something — it's almost always less awkward than you're imagining.`,
+    instr: `Respond in one sentence only. Keep it casual.`
+  }
+};
+
+let fpFormat = null, fpTone = null;
+
+function renderChips(containerId, items, onSelect, getActive) {
+  const el = document.getElementById(containerId);
+  items.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'fp-chip' + (getActive() === item ? ' active' : '');
+    btn.textContent = item;
+    btn.addEventListener('click', () => {
+      onSelect(item);
+      el.querySelectorAll('.fp-chip').forEach(b => b.classList.toggle('active', b.textContent === item));
+      updateFP();
+    });
+    el.appendChild(btn);
+  });
+}
+
+renderChips('fp-format', FP_FORMATS, v => fpFormat = v, () => fpFormat);
+renderChips('fp-tone', FP_TONES, v => fpTone = v, () => fpTone);
+
+function updateFP() {
+  const outputEl = document.getElementById('fp-output');
+  const instrEl = document.getElementById('fp-instruction');
+  const instrText = document.getElementById('fp-instr-text');
+  if (!fpFormat || !fpTone) {
+    outputEl.innerHTML = 'Select a format and tone above to see a sample response.';
+    instrEl.style.display = 'none';
+    return;
+  }
+  const key = `${fpFormat}|${fpTone}`;
+  const data = FP_RESPONSES[key];
+  if (!data) return;
+  outputEl.style.opacity = '0';
+  setTimeout(() => {
+    outputEl.innerHTML = data.text;
+    outputEl.style.opacity = '1';
+    instrText.textContent = data.instr;
+    instrEl.style.display = 'block';
+  }, 130);
+}
+</script>
+</body>
+</html>
